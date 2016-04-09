@@ -4,15 +4,28 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.TextView;
 
+import com.google.gson.JsonObject;
+import com.microsoft.azure.DCApplication;
 import com.microsoft.azure.datacollection.R;
+import com.microsoft.azure.datacollection.https.AzureClient;
+
+import java.io.IOException;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class HomeActivity extends AppCompatActivity {
+
+    private TextView textView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
+        textView = (TextView) findViewById(R.id.response);
     }
 
     @Override
@@ -30,7 +43,29 @@ public class HomeActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+        if (id == R.id.action_register) {
+            JsonObject object= new JsonObject();
+            object.addProperty("deviceId", "chouchou");
+            Call<JsonObject> call = AzureClient.getInstance().getAzureService().register(DCApplication.getInstance().getConfig().getDeviceId(), object);
+            call.enqueue(new Callback<JsonObject>() {
+                @Override
+                public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
+                    if (response.isSuccessful()) {
+                        textView.setText("success");
+                    } else {
+                        try {
+                            textView.setText(response.errorBody().string());
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<JsonObject> call, Throwable t) {
+                    textView.setText(t.toString());
+                }
+            });
             return true;
         }
 
