@@ -17,4 +17,6 @@ import retrofit2.http.Path;
 public interface AzureService {
     @PUT("devices/{deviceId}")
     Call<JsonObject> register(@Path("deviceId") String deviceId, @Body JsonObject object);
+
+
 }
