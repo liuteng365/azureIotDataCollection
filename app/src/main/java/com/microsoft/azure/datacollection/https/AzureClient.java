@@ -1,5 +1,8 @@
-package com.microsoft.azure.datacollection.http;
+package com.microsoft.azure.datacollection.https;
 
+import android.util.Log;
+
+import com.microsoft.azure.DCApplication;
 import com.microsoft.azure.iothub.DeviceClientConfig;
 import com.microsoft.azure.iothub.auth.IotHubSasToken;
 import com.microsoft.azure.iothub.net.IotHubUri;
@@ -7,11 +10,13 @@ import com.microsoft.azure.iothub.net.IotHubUri;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
+import okhttp3.HttpUrl;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 /**
  * Created by liuteng on 16-4-9.
@@ -22,25 +27,27 @@ public class AzureClient {
     private final Retrofit client;
     private final AzureService azureService;
 
-    private DeviceClientConfig config;
-
     private AzureClient() throws URISyntaxException {
-        config = new DeviceClientConfig("devicecontrolhub.azure-devices.net", "LchouchouT", "qmBQUbf3JJNaniP6glRF9JnKTAoGFNz7i1+87pln9wg=");
         OkHttpClient.Builder httpClient = new OkHttpClient.Builder();
         httpClient.addInterceptor(
                 new Interceptor() {
                     @Override
                     public Response intercept(Interceptor.Chain chain) throws IOException {
                         Request original = chain.request();
-                        IotHubSasToken sasToken = new IotHubSasToken(IotHubUri.getResourceUri(config.getIotHubHostname(), config.getDeviceId()),
-                                config.getDeviceKey(),
-                                System.currentTimeMillis() / 1000l + config.getTokenValidSecs() + 1l);
+                        IotHubSasToken sasToken = new IotHubSasToken(IotHubUri.getResourceUri(getConfig().getIotHubHostname(), getConfig().getDeviceId()),
+                                getConfig().getDeviceKey(),
+                                System.currentTimeMillis() / 1000l + getConfig().getTokenValidSecs() + 1l);
+                        Log.e("1111111111111111", sasToken.toString());
+                        HttpUrl url = original.url()
+                                .newBuilder()
+                                .addQueryParameter("api-version", "2016-02-03")
+                                .build();
                         Request request = original.newBuilder()
-                                .addHeader("api-version", "2016-02-03")
-                                .addHeader("IoTHubName", config.getIotHubName())
                                 .addHeader("Authorization", sasToken.toString())
-                                .header("Content-Type", "application/json")
+                                .addHeader("iothub-to", "/devices/device1/messages/devicebound")
+                                .addHeader("iothub-messagelocktimeout", "180")
                                 .method(original.method(), original.body())
+                                .url(url)
                                 .build();
 
                         return chain.proceed(request);
@@ -49,17 +56,21 @@ public class AzureClient {
 
         OkHttpClient okClient = httpClient.build();
         client = new Retrofit.Builder()
-                .baseUrl("https://api.github.com")
+                .baseUrl("https://" + getConfig().getIotHubHostname())
+                .addConverterFactory(GsonConverterFactory.create())
                 .client(okClient)
                 .build();
         azureService = client.create(AzureService.class);
     }
 
-    public static AzureClient getInstance() throws URISyntaxException {
+    public static AzureClient getInstance() {
         if (instance == null) {
             synchronized (AzureClient.class) {
                 if (instance == null) {
-                    instance = new AzureClient();
+                    try {
+                        instance = new AzureClient();
+                    } catch (URISyntaxException e) {
+                    }
                 }
             }
         }
@@ -68,5 +79,9 @@ public class AzureClient {
 
     public AzureService getAzureService() {
         return azureService;
+    }
+
+    public static DeviceClientConfig getConfig() {
+        return DCApplication.getInstance().getConfig();
     }
 }

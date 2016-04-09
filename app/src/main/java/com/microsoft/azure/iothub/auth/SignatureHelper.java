@@ -55,7 +55,7 @@ public final class SignatureHelper
     public static byte[] decodeDeviceKeyBase64(String deviceKey)
     {
         // Codes_SRS_SIGNATUREHELPER_11_003: [The function shall decode the device key using Base64.]
-        return Base64Utils.decode(deviceKey, Base64.DEFAULT);
+        return Base64Utils.decode(deviceKey, Base64.NO_WRAP);
     }
 
     /**
@@ -104,8 +104,7 @@ public final class SignatureHelper
      */
     public static byte[] encodeSignatureBase64(byte[] sig) throws UnsupportedEncodingException {
         // Codes_SRS_SIGNATUREHELPER_11_006: [The function shall encode the signature using Base64.]
-        return new String(Base64Utils.encode(sig, Base64.DEFAULT), "UTF-8")
-                .getBytes(SIGNATURE_CHARSET);
+        return Base64Utils.encode(sig, Base64.NO_WRAP);
     }
 
     /**
