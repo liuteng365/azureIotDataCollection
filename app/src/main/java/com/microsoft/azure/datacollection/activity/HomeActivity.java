@@ -18,14 +18,13 @@ import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.google.gson.reflect.TypeToken;
 import com.microsoft.azure.DCApplication;
 import com.microsoft.azure.datacollection.R;
 import com.microsoft.azure.datacollection.base.BaseData;
@@ -177,10 +176,11 @@ public class HomeActivity extends AppCompatActivity implements SensorEventListen
     public void onAccuracyChanged(Sensor sensor, int accuracy) {}
 
     public class MotionEvent extends BaseData {
-        private long timestamp;
+        private long ts;
         private float aX;
         private float aY;
         private float aZ;
+        private String deviceId;
 
         public MotionEvent() {}
 
@@ -188,14 +188,15 @@ public class HomeActivity extends AppCompatActivity implements SensorEventListen
             this.aX = aX;
             this.aY = aY;
             this.aZ = aZ;
-            this.timestamp = System.currentTimeMillis();
+            this.ts = System.currentTimeMillis();
+            this.deviceId = DCApplication.getInstance().getConfig().getDeviceId();
         }
     }
 
     public class EventsPkg extends BaseData {
-         private List<MotionEvent> data;
+        private List<MotionEvent> data;
 
-        public EventsPkg(){}
+        public EventsPkg() {}
 
         public EventsPkg(List<MotionEvent> data) {
             this.data = data;
@@ -223,11 +224,10 @@ public class HomeActivity extends AppCompatActivity implements SensorEventListen
                     EventsPkg eventsPkg = new EventsPkg(list);
                     Gson gson = new Gson();
                     String data = gson.toJson(eventsPkg);
-                    Call<JsonObject> call = AzureClient.getInstance().getAzureService().sendEvent(DCApplication.getInstance().getConfig().getDeviceId(), data);
-
-                    call.enqueue(new Callback<JsonObject>() {
+                    Call<String> call = AzureClient.getInstance().getAzureService().sendEvent(DCApplication.getInstance().getConfig().getDeviceId(), data);
+                    call.enqueue(new Callback<String>() {
                         @Override
-                        public void onResponse(Call<JsonObject> call, Response<JsonObject> response) {
+                        public void onResponse(Call<String> call, Response<String> response) {
                             Intent intent = new Intent(MOTION_EVENTS_UPLOADED);
                             StringBuilder sb = new StringBuilder();
                             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -240,9 +240,7 @@ public class HomeActivity extends AppCompatActivity implements SensorEventListen
                                 }
                                 sb.append("\n");
                                 String s = sb.toString();
-                                Spannable ss = new SpannableString(s);
-                                ss.setSpan(new ForegroundColorSpan(Color.GREEN), 0, s.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
-                                intent.putExtra(MOTION_EVENTS_UPLOAD_RESULT, ss);
+                                intent.putExtra(MOTION_EVENTS_UPLOAD_RESULT, s);
                             } else {
                                 sb.append(time + " : upload failed.\n");
                                 sb.append("\tresponse : status code:" + response.code() + "\n");
@@ -255,7 +253,7 @@ public class HomeActivity extends AppCompatActivity implements SensorEventListen
                         }
 
                         @Override
-                        public void onFailure(Call<JsonObject> call, Throwable t) {
+                        public void onFailure(Call<String> call, Throwable t) {
                             Intent intent = new Intent(MOTION_EVENTS_UPLOADED);
                             StringBuilder sb = new StringBuilder();
                             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -294,20 +292,22 @@ public class HomeActivity extends AppCompatActivity implements SensorEventListen
                     SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
                     String time = dateFormat.format(new Date());
                     Response<String> response = call.execute();
-                    if (response.isSuccessful()) {
+                    if (response.code() == 200 && response.body() != null) {
                         sb.append(time + " : received. statuscode:" + response.code() + "\n");
                         sb.append(("\treceived message : ") + (response.body() == null ? "" : response.body()) + "\n");
-                    }
-                    if (response.body() != null) {
                         String s = sb.toString();
                         Spannable ss = new SpannableString(s);
-                        ss.setSpan(new ForegroundColorSpan(Color.RED), 0, s.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
-                        intent.putExtra(MOTION_EVENTS_DOWNLOAD_RESULT, ss);
-                    } else {
-                        intent.putExtra(MOTION_EVENTS_DOWNLOAD_RESULT, sb.toString());
+                        ss.setSpan(new ForegroundColorSpan(Color.GREEN), 0, s.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
+                        intent.putExtra(MOTION_EVENTS_DOWNLOAD_RESULT, s);
+                        LocalBroadcastManager.getInstance(DCApplication.getInstance()).sendBroadcast(intent);
+                        String etag = response.headers().get("etag");
+                        etag = etag.replace("\"", "");
+                        Call<String> complete = AzureClient.getInstance().getAzureService().deleteEvent(DCApplication.getInstance().getConfig().getDeviceId(), etag);
+                        Response<String> completeRsp = complete.execute();
+                        Log.e("1111111111111100", "" + completeRsp.code());
                     }
-                    LocalBroadcastManager.getInstance(DCApplication.getInstance()).sendBroadcast(intent);
                 } catch (Throwable e) {
+                    Log.e("1111111111111100", e.getMessage(), e);
                 }
                 SystemClock.sleep(1000);
             }

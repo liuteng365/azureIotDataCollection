@@ -5,18 +5,22 @@ import android.util.Log;
 import com.microsoft.azure.DCApplication;
 import com.microsoft.azure.iothub.DeviceClientConfig;
 import com.microsoft.azure.iothub.auth.IotHubSasToken;
+import com.microsoft.azure.iothub.net.IotHubMessageUri;
 import com.microsoft.azure.iothub.net.IotHubUri;
+import com.microsoft.azure.iothub.transport.https.HttpsMethod;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 
 import okhttp3.HttpUrl;
+import okhttp3.HttpUrl.Builder;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
+import retrofit2.converter.scalars.ScalarsConverterFactory;
 
 /**
  * Created by liuteng on 16-4-9.
@@ -34,22 +38,28 @@ public class AzureClient {
                     @Override
                     public Response intercept(Interceptor.Chain chain) throws IOException {
                         Request original = chain.request();
+                        IotHubMessageUri messageUri = new IotHubMessageUri(getConfig().getIotHubHostname(), getConfig().getDeviceId());
                         IotHubSasToken sasToken = new IotHubSasToken(IotHubUri.getResourceUri(getConfig().getIotHubHostname(), getConfig().getDeviceId()),
                                 getConfig().getDeviceKey(),
                                 System.currentTimeMillis() / 1000l + getConfig().getTokenValidSecs() + 1l);
-                        Log.e("1111111111111111", sasToken.toString());
-                        HttpUrl url = original.url()
+                        Builder urlBuilder = original.url()
                                 .newBuilder()
-                                .addQueryParameter("api-version", "2016-02-03")
-                                .build();
-                        Request request = original.newBuilder()
-                                .addHeader("Authorization", sasToken.toString())
-                                .addHeader("iothub-to", "/devices/device1/messages/devicebound")
-                                .addHeader("iothub-messagelocktimeout", "180")
-                                .method(original.method(), original.body())
+                                .addQueryParameter("api-version", "2016-02-03");
+                        if (original.method().equals(HttpsMethod.GET.name())) {
+                            urlBuilder.addQueryParameter("iothub-messagelocktimeout", "60");
+                        }
+                        HttpUrl url = urlBuilder.build();
+                        Request.Builder requestBuilder = original.newBuilder()
+                                .addHeader("authorization", sasToken.toString());
+                        if (!original.method().equals(HttpsMethod.POST.name())) {
+                            requestBuilder.addHeader("iothub-to", messageUri.getPath());
+                        }
+
+                        Request request = requestBuilder.method(original.method(), original.body())
                                 .url(url)
                                 .build();
-
+                        Log.e("1111111111111111", request.url().toString());
+                        Log.e("1111111111111112", request.headers().toString());
                         return chain.proceed(request);
                     }
                 });
@@ -57,6 +67,7 @@ public class AzureClient {
         OkHttpClient okClient = httpClient.build();
         client = new Retrofit.Builder()
                 .baseUrl("https://" + getConfig().getIotHubHostname())
+                .addConverterFactory(ScalarsConverterFactory.create())
                 .addConverterFactory(GsonConverterFactory.create())
                 .client(okClient)
                 .build();

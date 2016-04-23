@@ -7,7 +7,7 @@ package com.microsoft.azure.iothub.net;
 public final class IotHubMessageUri
 {
     /** The path to be appended to an IoT Hub URI. */
-    public static final String MESSAGE_PATH = "/messages/devicebound";
+    public static final String MESSAGE_PATH = "/messages/deviceBound";
 
     /** The underlying IoT Hub URI. */
     protected final IotHubUri uri;
