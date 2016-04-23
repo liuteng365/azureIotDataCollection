@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -13,6 +14,10 @@ import android.os.Handler;
 import android.os.SystemClock;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
+import android.text.Spannable;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ScrollView;
@@ -187,6 +192,16 @@ public class HomeActivity extends AppCompatActivity implements SensorEventListen
         }
     }
 
+    public class EventsPkg extends BaseData {
+         private List<MotionEvent> data;
+
+        public EventsPkg(){}
+
+        public EventsPkg(List<MotionEvent> data) {
+            this.data = data;
+        }
+    }
+
     public class IotHubUploadDataThread extends Thread {
 
         private boolean isCanceled = false;
@@ -205,8 +220,9 @@ public class HomeActivity extends AppCompatActivity implements SensorEventListen
                         list.addAll(queue);
                         queue.clear();
                     }
+                    EventsPkg eventsPkg = new EventsPkg(list);
                     Gson gson = new Gson();
-                    String data = gson.toJson(list, new TypeToken<List<MotionEvent>>() {}.getType());
+                    String data = gson.toJson(eventsPkg);
                     Call<JsonObject> call = AzureClient.getInstance().getAzureService().sendEvent(DCApplication.getInstance().getConfig().getDeviceId(), data);
 
                     call.enqueue(new Callback<JsonObject>() {
@@ -224,16 +240,16 @@ public class HomeActivity extends AppCompatActivity implements SensorEventListen
                                 }
                                 sb.append("\n");
                                 String s = sb.toString();
-//                                Spannable ss = new SpannableString(s);
-//                                ss.setSpan(new ForegroundColorSpan(DCApplication.getInstance().getResources().getColor(R.color.red)), 0, s.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
-                                intent.putExtra(MOTION_EVENTS_UPLOAD_RESULT, s);
+                                Spannable ss = new SpannableString(s);
+                                ss.setSpan(new ForegroundColorSpan(Color.GREEN), 0, s.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
+                                intent.putExtra(MOTION_EVENTS_UPLOAD_RESULT, ss);
                             } else {
                                 sb.append(time + " : upload failed.\n");
                                 sb.append("\tresponse : status code:" + response.code() + "\n");
                                 String s = sb.toString();
-//                                Spannable ss = new SpannableString(s);
-//                                ss.setSpan(new ForegroundColorSpan(DCApplication.getInstance().getResources().getColor(R.color.red)), 0, s.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
-                                intent.putExtra(MOTION_EVENTS_UPLOAD_RESULT, s);
+                                Spannable ss = new SpannableString(s);
+                                ss.setSpan(new ForegroundColorSpan(Color.RED), 0, s.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
+                                intent.putExtra(MOTION_EVENTS_UPLOAD_RESULT, ss);
                             }
                             LocalBroadcastManager.getInstance(DCApplication.getInstance()).sendBroadcast(intent);
                         }
@@ -246,7 +262,10 @@ public class HomeActivity extends AppCompatActivity implements SensorEventListen
                             String time = dateFormat.format(new Date());
                             sb.append(time + " : upload failed.\n");
                             sb.append("\texception : " + t.toString() + "\n");
-                            intent.putExtra(MOTION_EVENTS_UPLOAD_RESULT, sb.toString());
+                            String s = sb.toString();
+                            Spannable ss = new SpannableString(s);
+                            ss.setSpan(new ForegroundColorSpan(Color.RED), 0, s.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
+                            intent.putExtra(MOTION_EVENTS_UPLOAD_RESULT, ss);
                             LocalBroadcastManager.getInstance(DCApplication.getInstance()).sendBroadcast(intent);
                         }
                     });
@@ -279,7 +298,14 @@ public class HomeActivity extends AppCompatActivity implements SensorEventListen
                         sb.append(time + " : received. statuscode:" + response.code() + "\n");
                         sb.append(("\treceived message : ") + (response.body() == null ? "" : response.body()) + "\n");
                     }
-                    intent.putExtra(MOTION_EVENTS_DOWNLOAD_RESULT, sb.toString());
+                    if (response.body() != null) {
+                        String s = sb.toString();
+                        Spannable ss = new SpannableString(s);
+                        ss.setSpan(new ForegroundColorSpan(Color.RED), 0, s.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
+                        intent.putExtra(MOTION_EVENTS_DOWNLOAD_RESULT, ss);
+                    } else {
+                        intent.putExtra(MOTION_EVENTS_DOWNLOAD_RESULT, sb.toString());
+                    }
                     LocalBroadcastManager.getInstance(DCApplication.getInstance()).sendBroadcast(intent);
                 } catch (Throwable e) {
                 }
