@@ -45,8 +45,6 @@ public class HomeActivity extends AppCompatActivity implements SensorEventListen
 
     private TextView uploadRespTextView;
     private TextView downloadMsgTextView;
-    private StringBuilder uploadRespSb = new StringBuilder();
-    private StringBuilder receivedMsgSb = new StringBuilder();
     private SensorManager sensorManager;
     private ConcurrentLinkedQueue<MotionEvent> queue = new ConcurrentLinkedQueue<>();
     private long lastSensorSampleTime = 0;
@@ -89,9 +87,7 @@ public class HomeActivity extends AppCompatActivity implements SensorEventListen
     public void onBroadCast(Intent intent) {
         if (MOTION_EVENTS_UPLOADED.equals(intent.getAction())) {
             CharSequence result = intent.getCharSequenceExtra(MOTION_EVENTS_UPLOAD_RESULT);
-            uploadRespSb.append(result);
-            uploadRespSb.append("\n");
-            uploadRespTextView.setText(uploadRespSb.toString());
+            uploadRespTextView.append(result);
             new Handler().post(new Runnable() {
                 @Override
                 public void run() {
@@ -100,8 +96,7 @@ public class HomeActivity extends AppCompatActivity implements SensorEventListen
             });
         } else if (MOTION_EVENTS_DOWNLOADED.equals(intent.getAction())) {
             String result = intent.getStringExtra(MOTION_EVENTS_DOWNLOAD_RESULT);
-            receivedMsgSb.append(result).append("\n");
-            downloadMsgTextView.setText(receivedMsgSb.toString());
+            downloadMsgTextView.append(result);
             new Handler().post(new Runnable() {
                 @Override
                 public void run() {
@@ -227,13 +222,14 @@ public class HomeActivity extends AppCompatActivity implements SensorEventListen
                                 if (response.body() != null) {
                                     sb.append(", body:" + response.body().toString());
                                 }
+                                sb.append("\n");
                                 String s = sb.toString();
 //                                Spannable ss = new SpannableString(s);
 //                                ss.setSpan(new ForegroundColorSpan(DCApplication.getInstance().getResources().getColor(R.color.red)), 0, s.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
                                 intent.putExtra(MOTION_EVENTS_UPLOAD_RESULT, s);
                             } else {
                                 sb.append(time + " : upload failed.\n");
-                                sb.append("\tresponse : status code:" + response.code());
+                                sb.append("\tresponse : status code:" + response.code() + "\n");
                                 String s = sb.toString();
 //                                Spannable ss = new SpannableString(s);
 //                                ss.setSpan(new ForegroundColorSpan(DCApplication.getInstance().getResources().getColor(R.color.red)), 0, s.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);
@@ -249,7 +245,7 @@ public class HomeActivity extends AppCompatActivity implements SensorEventListen
                             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
                             String time = dateFormat.format(new Date());
                             sb.append(time + " : upload failed.\n");
-                            sb.append("\texception : " + t.toString());
+                            sb.append("\texception : " + t.toString() + "\n");
                             intent.putExtra(MOTION_EVENTS_UPLOAD_RESULT, sb.toString());
                             LocalBroadcastManager.getInstance(DCApplication.getInstance()).sendBroadcast(intent);
                         }
@@ -281,7 +277,7 @@ public class HomeActivity extends AppCompatActivity implements SensorEventListen
                     Response<String> response = call.execute();
                     if (response.isSuccessful()) {
                         sb.append(time + " : received. statuscode:" + response.code() + "\n");
-                        sb.append(("\treceived message : ") + (response.body() == null ? "" : response.body()));
+                        sb.append(("\treceived message : ") + (response.body() == null ? "" : response.body()) + "\n");
                     }
                     intent.putExtra(MOTION_EVENTS_DOWNLOAD_RESULT, sb.toString());
                     LocalBroadcastManager.getInstance(DCApplication.getInstance()).sendBroadcast(intent);
