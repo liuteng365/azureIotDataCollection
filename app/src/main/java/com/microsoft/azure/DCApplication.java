@@ -19,7 +19,7 @@ public class DCApplication extends Application {
         super.onCreate();
         app = this;
         try {
-            config = new DeviceClientConfig("devicecontrolhub.azure-devices.net", "device1", "g/Bu9TNbQ+CER56BlAhP5u3MnHgRF014vkW7bSKgTOc=");
+            config = new DeviceClientConfig("{yourIotHubName}.azure-devices.net", "{deviceId}", "{deviceKey}");
         } catch (URISyntaxException e) {
         }
     }
@@ -31,7 +31,7 @@ public class DCApplication extends Application {
     public DeviceClientConfig getConfig() {
         if (config == null) {
             try {
-                config = new DeviceClientConfig("devicecontrolhub.azure-devices.net", "device1", "g/Bu9TNbQ+CER56BlAhP5u3MnHgRF014vkW7bSKgTOc=");
+                config = new DeviceClientConfig("{yourIotHubName}.azure-devices.net", "{deviceId}", "{deviceKey}");
             } catch (URISyntaxException e) {
             }
         }
