@@ -12,6 +12,7 @@ import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
+import android.os.Vibrator;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Spannable;
@@ -23,6 +24,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.gson.Gson;
 import com.microsoft.azure.DCApplication;
@@ -46,6 +48,7 @@ public class HomeActivity extends AppCompatActivity implements SensorEventListen
     public static final String MOTION_EVENTS_DOWNLOADED = "motion.events.downloaded";
     public static final String MOTION_EVENTS_UPLOAD_RESULT = "result.motion.events.uploaded";
     public static final String MOTION_EVENTS_DOWNLOAD_RESULT = "result.motion.events.downloaded";
+    public static final String DO_VIBRATION = "do.vibration";
 
     private TextView uploadRespTextView;
     private TextView downloadMsgTextView;
@@ -58,6 +61,7 @@ public class HomeActivity extends AppCompatActivity implements SensorEventListen
     private ScrollView upScrollView;
     private ScrollView downScrollView;
     private IotHubDownloadDataThread downloadMsgThread;
+    private Vibrator vibrator;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,12 +77,14 @@ public class HomeActivity extends AppCompatActivity implements SensorEventListen
             downloadMsgThread = new IotHubDownloadDataThread();
             downloadMsgThread.start();
         }
+        vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
     }
 
     private void onCreateBroadCastReceiver() {
         IntentFilter filter = new IntentFilter();
         filter.addAction(MOTION_EVENTS_UPLOADED);
         filter.addAction(MOTION_EVENTS_DOWNLOADED);
+        filter.addAction(DO_VIBRATION);
         receiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -107,6 +113,8 @@ public class HomeActivity extends AppCompatActivity implements SensorEventListen
                     downScrollView.fullScroll(ScrollView.FOCUS_DOWN);
                 }
             });
+        } else if (DO_VIBRATION.equals(intent.getAction())) {
+            doVibration();
         }
     }
 
@@ -157,6 +165,11 @@ public class HomeActivity extends AppCompatActivity implements SensorEventListen
             MotionEvent data = new MotionEvent(aX, aY, aZ);
             queue.add(data);
         }
+    }
+
+    private void doVibration() {
+        Toast.makeText(getApplication(), "正在震动", Toast.LENGTH_SHORT).show();
+        vibrator.vibrate(1000);
     }
 
     @Override
@@ -304,6 +317,7 @@ public class HomeActivity extends AppCompatActivity implements SensorEventListen
                         etag = etag.replace("\"", "");
                         Call<String> complete = AzureClient.getInstance().getAzureService().deleteEvent(DCApplication.getInstance().getConfig().getDeviceId(), etag);
                         Response<String> completeRsp = complete.execute();
+                        LocalBroadcastManager.getInstance(DCApplication.getInstance()).sendBroadcast(new Intent(DO_VIBRATION));
                     }
                 } catch (Throwable e) {
                     Log.e(HomeActivity.class.getSimpleName(), e.getMessage(), e);
