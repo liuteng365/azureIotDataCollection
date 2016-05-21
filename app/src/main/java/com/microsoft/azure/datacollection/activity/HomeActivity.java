@@ -304,10 +304,9 @@ public class HomeActivity extends AppCompatActivity implements SensorEventListen
                         etag = etag.replace("\"", "");
                         Call<String> complete = AzureClient.getInstance().getAzureService().deleteEvent(DCApplication.getInstance().getConfig().getDeviceId(), etag);
                         Response<String> completeRsp = complete.execute();
-                        Log.e("1111111111111100", "" + completeRsp.code());
                     }
                 } catch (Throwable e) {
-                    Log.e("1111111111111100", e.getMessage(), e);
+                    Log.e(HomeActivity.class.getSimpleName(), e.getMessage(), e);
                 }
                 SystemClock.sleep(1000);
             }

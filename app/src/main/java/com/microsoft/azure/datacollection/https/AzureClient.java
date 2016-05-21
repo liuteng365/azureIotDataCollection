@@ -1,7 +1,5 @@
 package com.microsoft.azure.datacollection.https;
 
-import android.util.Log;
-
 import com.microsoft.azure.DCApplication;
 import com.microsoft.azure.iothub.DeviceClientConfig;
 import com.microsoft.azure.iothub.auth.IotHubSasToken;
@@ -46,7 +44,7 @@ public class AzureClient {
                                 .newBuilder()
                                 .addQueryParameter("api-version", "2016-02-03");
                         if (original.method().equals(HttpsMethod.GET.name())) {
-                            urlBuilder.addQueryParameter("iothub-messagelocktimeout", "60");
+                            urlBuilder.addQueryParameter("iothub-messagelocktimeout", String.valueOf(getConfig().getMessageLockTimeoutSecs()));
                         }
                         HttpUrl url = urlBuilder.build();
                         Request.Builder requestBuilder = original.newBuilder()
@@ -58,8 +56,6 @@ public class AzureClient {
                         Request request = requestBuilder.method(original.method(), original.body())
                                 .url(url)
                                 .build();
-                        Log.e("1111111111111111", request.url().toString());
-                        Log.e("1111111111111112", request.headers().toString());
                         return chain.proceed(request);
                     }
                 });
